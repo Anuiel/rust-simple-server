@@ -4,6 +4,7 @@ use std::net::IpAddr;
 mod utils;
 use utils::run::run;
 
+/// Structure to run server from command line much easier
 #[derive(Debug, Parser)]
 struct Opts {
     #[clap(short, long)]

@@ -1,11 +1,15 @@
-use std::{net::TcpStream, io::{BufReader, Write, BufRead}};
+#![forbid(unsafe_code)]
 
+use std::{net::TcpStream, io::{BufReader, Write, BufRead}};
 use serde::{de::DeserializeOwned, Serialize};
 
-pub const DELIMETER: u8 = b'}';
+const DELIMETER: u8 = b'}';
 
+/// Trait for types that implement json-like protocol
 pub trait Protocol {
+    /// Send ```Self``` into ```TcpStream``` as json.
     fn send(&mut self, stream: &mut TcpStream) -> std::io::Result<()>;
+    /// Load ```Self``` from ```TcpStrem```.
     fn load(stream: &mut TcpStream) -> std::io::Result<Self>
     where
         Self: Sized;

@@ -11,11 +11,13 @@ use chrono::prelude::*;
 
 use super::{request::RequestType, response::ResponseType, protocol::Protocol};
 
+/// Enum for simplier log output
 enum LogInfo<'a> {
     Request(&'a RequestType),
     ConnectionEstablished
 }
 
+/// Prints more readable log output
 fn print_log(ip: IpAddr, log: LogInfo, storage_size: usize) {
     print!("{} [{}] ", ip, Utc::now().format("%d/%b%Y:%T %z"), );
     match log {
@@ -30,15 +32,15 @@ fn print_log(ip: IpAddr, log: LogInfo, storage_size: usize) {
                 RequestType::Load { key } => {
                     print!("Received request to get value by key {key}. ")
                 },
-                RequestType::Error => {
-                    print!("Error while received request. ")
-                },
             }
         }
     }
     println!("Storage size: {storage_size}.")
 }
 
+/// Main function that wll lauch server on ```ip```:```port```
+/// 
+/// Communication protocol implemented throw json files. More about them c
 pub fn run(ip: IpAddr, port: u16) {
     let addr = SocketAddr::from((ip, port));
     let listener = TcpListener::bind(addr).unwrap();
@@ -55,27 +57,24 @@ pub fn run(ip: IpAddr, port: u16) {
                 let request = match RequestType::load(&mut stream) {
                     Ok(request) => request,
                     Err(err) if err.kind() == std::io::ErrorKind::Other => continue,
-                    Err(err) if err.kind() == std::io::ErrorKind::ConnectionAborted => break,
                     Err(_err) => {
-                        print!("{}", _err.kind());
-                        RequestType::Error
+                        let _ = ResponseType::Error.send(&mut stream);
+                        break
                     }
                 };
-                println!("{:?}", request);
                 print_log(ip, LogInfo::Request(&request), map.lock().unwrap().len());
                 let mut response = match request {
                     RequestType::Store { key, value } => {
                         map.lock().unwrap().insert(key, value);
-                        ResponseType::StoreSuccess
+                        ResponseType::SuccessStore
                     }
                     RequestType::Load { key } => match map.lock().unwrap().get(&key) {
-                        Some(value) => ResponseType::LoadSuccess {
+                        Some(value) => ResponseType::SuccessLoad {
                             key,
                             value: value.to_string(),
                         },
-                        None => ResponseType::LoadNotFound,
+                        None => ResponseType::KeyNotFound,
                     },
-                    RequestType::Error => ResponseType::Error,
                 };
                 response.send(&mut stream).unwrap();
             });
