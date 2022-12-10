@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Type for getting request from client
 #[derive(Debug, Serialize, Deserialize)]
@@ -9,10 +9,10 @@ use serde::{Serialize, Deserialize};
 pub enum RequestType {
     /// Store request.
     /// Gets pair (```key```, ```value```) which client wants server yo store.
-    Store { 
-        key: String, 
+    Store {
+        key: String,
         #[serde(rename = "hash")]
-        value: String 
+        value: String,
     },
     /// Load request.
     /// Gets which ```key``` client wants to load from server's storage.

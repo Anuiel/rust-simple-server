@@ -9,37 +9,35 @@ use std::{
 
 use chrono::prelude::*;
 
-use super::{request::RequestType, response::ResponseType, protocol::Protocol};
+use super::{protocol::Protocol, request::RequestType, response::ResponseType};
 
 /// Enum for simplier log output
 enum LogInfo<'a> {
     Request(&'a RequestType),
-    ConnectionEstablished
+    ConnectionEstablished,
 }
 
 /// Prints more readable log output
 fn print_log(ip: IpAddr, log: LogInfo, storage_size: usize) {
-    print!("{} [{}] ", ip, Utc::now().format("%d/%b%Y:%T %z"), );
+    print!("{} [{}] ", ip, Utc::now().format("%d/%b%Y:%T %z"),);
     match log {
         LogInfo::ConnectionEstablished => {
             print!("Connection established. ");
-        },
-        LogInfo::Request(request) => {
-            match request {
-                RequestType::Store { key, value } => {
-                    print!("Received request to write new value {value} by key {key}. ")
-                },
-                RequestType::Load { key } => {
-                    print!("Received request to get value by key {key}. ")
-                },
-            }
         }
+        LogInfo::Request(request) => match request {
+            RequestType::Store { key, value } => {
+                print!("Received request to write new value {value} by key {key}. ")
+            }
+            RequestType::Load { key } => {
+                print!("Received request to get value by key {key}. ")
+            }
+        },
     }
     println!("Storage size: {storage_size}.")
 }
 
 /// Main function that wll lauch server on ```ip```:```port```
-/// 
+///
 /// Communication protocol implemented throw json files. More about them c
 pub fn run(ip: IpAddr, port: u16) {
     let addr = SocketAddr::from((ip, port));
@@ -50,7 +48,11 @@ pub fn run(ip: IpAddr, port: u16) {
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
         let map = Arc::clone(&data_ref);
-        print_log(ip, LogInfo::ConnectionEstablished, map.lock().unwrap().len());
+        print_log(
+            ip,
+            LogInfo::ConnectionEstablished,
+            map.lock().unwrap().len(),
+        );
         let _ = std::thread::Builder::new()
             .name(stream.peer_addr().unwrap().to_string())
             .spawn(move || loop {
@@ -59,7 +61,7 @@ pub fn run(ip: IpAddr, port: u16) {
                     Err(err) if err.kind() == std::io::ErrorKind::Other => continue,
                     Err(_err) => {
                         let _ = ResponseType::Error.send(&mut stream);
-                        break
+                        break;
                     }
                 };
                 print_log(ip, LogInfo::Request(&request), map.lock().unwrap().len());

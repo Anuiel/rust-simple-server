@@ -1,7 +1,10 @@
 #![forbid(unsafe_code)]
 
-use std::{net::TcpStream, io::{BufReader, Write, BufRead}};
 use serde::{de::DeserializeOwned, Serialize};
+use std::{
+    io::{BufRead, BufReader, Write},
+    net::TcpStream,
+};
 
 const DELIMETER: u8 = b'}';
 
@@ -29,10 +32,7 @@ where
         let mut buf = Vec::<u8>::new();
         let bytes_read = reader.read_until(DELIMETER, &mut buf)?;
         if bytes_read == 0 {
-            return Result::Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "EOF",
-            ));
+            return Result::Err(std::io::Error::new(std::io::ErrorKind::Other, "EOF"));
         }
         Ok(serde_json::from_slice(&buf)?)
     }
