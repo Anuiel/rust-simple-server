@@ -1,9 +1,10 @@
 use clap::Parser;
-use rand::Rng;
-use std::{net::IpAddr, str::FromStr};
+use std::net::IpAddr;
 
-use server::run;
+mod utils;
+use utils::run::run;
 
+/// Structure to run server from command line much easier
 #[derive(Debug, Parser)]
 struct Opts {
     #[clap(short, long)]
