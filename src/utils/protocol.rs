@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+//! Trait that implement server-client communication as json files
 
 use serde::{de::DeserializeOwned, Serialize};
 use std::{

@@ -1,8 +1,8 @@
-/// Trait that implement server-client communication as json files
+//! Collection of all usefull modules, traits and functions
+//! like [`request`](crate::utils::request)
+//! and  [`response`](crate::utils::response)
+
 pub mod protocol;
-/// Regulates types of request that server can receive
 pub mod request;
-/// Rules for server response
 pub mod response;
-/// Functon that lauch the server and regulates all logic
 pub mod run;

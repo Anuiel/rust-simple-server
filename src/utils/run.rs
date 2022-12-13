@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
+//! Functon that lauch the server and regulates all logic
 
-// use log::info;
 use std::{
     collections::HashMap,
     net::{IpAddr, SocketAddr, TcpListener},
@@ -38,7 +38,7 @@ fn print_log(ip: IpAddr, log: LogInfo, storage_size: usize) {
 
 /// Main function that wll lauch server on ```ip```:```port```
 ///
-/// Communication protocol implemented throw json files. More about them c
+/// Communication protocol implemented throw json files.
 pub fn run(ip: IpAddr, port: u16) {
     let addr = SocketAddr::from((ip, port));
     let listener = TcpListener::bind(addr).unwrap();

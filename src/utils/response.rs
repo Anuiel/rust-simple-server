@@ -1,4 +1,32 @@
 #![forbid(unsafe_code)]
+//! Rules for server response
+//! ## Example
+//! This json-like text
+//! ```
+//! let response = ResponseType::SuccessStore;
+//!
+//! let ser_response = serde_json::to_string(response).unwrap();
+//!
+//! assert_eq!(ser_responce, r#"{"response_status":"success"#);
+//! ```
+//! Or
+//! ```
+//! let response = ResponseType::SuccessLoad {key: "key".into(), value: "hash".into()};
+//!
+//! let ser_response = serde_json::to_string(response).unwrap();
+//!
+//! assert_eq!(ser_responce,
+//!     r#"
+//!     {
+//!         "response_status": "success",
+//!         "requested_key": "key",
+//!         "requested_hash": "hash"
+//!     }"#
+//!     .to_string()
+//!     .replace(" ", "")
+//!     .replace("\n", "")
+//! );
+//! ```
 
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +40,7 @@ pub enum ResponseType {
     SuccessStore,
     #[serde(rename = "success")]
     /// Server will send it after a successful load
-    /// This response also will send requested key
+    /// This response also will send requested ```key```
     SuccessLoad {
         #[serde(rename = "requested_key")]
         key: String,
@@ -20,7 +48,7 @@ pub enum ResponseType {
         value: String,
     },
     /// Server will send it after a successful load
-    /// This response means that client's key are not in server's storage
+    /// This response means that ```key``` are not in server's storage
     #[serde(rename = "key not found")]
     KeyNotFound,
     /// Sever will send it if there was an incorrect request ot any other problem

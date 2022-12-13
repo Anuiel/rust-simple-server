@@ -1,5 +1,36 @@
 #![forbid(unsafe_code)]
-
+//! Regulates types of request that server can receive
+//! ## Example
+//! This json-like text
+//! ```
+//! let store = r#"{
+//!         "request_type": "store",
+//!             "key": "key",
+//!             "hash": "hash"
+//!         }"#;
+//! let request = serde_json::from_str(&store).unwrap();
+//!
+//! assert_eq!(request,
+//!     RequestType::Store {
+//!         key: "key".to_string(),
+//!         value: "hash".to_string(),
+//!     }
+//! );
+//! ```
+//! Or
+//! ```
+//! let load = r#"{
+//!         "request_type": "load",
+//!             "key": "key"
+//!         }"#;
+//! let request = serde_json::from_str(&load).unwrap();
+//!
+//! assert_eq!(request,
+//!     RequestType::Load {
+//!         key: "key".to_string()
+//!     }
+//! );
+//! ```
 use serde::{Deserialize, Serialize};
 
 /// Type for getting request from client
