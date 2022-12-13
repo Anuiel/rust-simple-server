@@ -53,7 +53,7 @@ pub fn run(ip: IpAddr, port: u16) {
             LogInfo::ConnectionEstablished,
             map.lock().unwrap().len(),
         );
-        let _ = std::thread::Builder::new()
+        std::thread::Builder::new()
             .name(stream.peer_addr().unwrap().to_string())
             .spawn(move || loop {
                 let request = match RequestType::load(&mut stream) {
@@ -64,7 +64,9 @@ pub fn run(ip: IpAddr, port: u16) {
                         break;
                     }
                 };
+
                 print_log(ip, LogInfo::Request(&request), map.lock().unwrap().len());
+
                 let mut response = match request {
                     RequestType::Store { key, value } => {
                         map.lock().unwrap().insert(key, value);
@@ -79,6 +81,73 @@ pub fn run(ip: IpAddr, port: u16) {
                     },
                 };
                 response.send(&mut stream).unwrap();
-            });
+            })
+            .unwrap()
+            .join()
+            .unwrap();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        net::{TcpListener, TcpStream},
+        sync::{atomic::AtomicUsize, Arc},
+        thread::{self, JoinHandle},
+    };
+
+    use crate::utils::{protocol::Protocol, request::RequestType, response::ResponseType};
+
+    #[test]
+    fn multiple_users() {
+        let addr = "localhost:7775";
+        let thread_count = 100;
+        let listener = TcpListener::bind(addr).unwrap();
+        let users_threads: Vec<JoinHandle<()>> = (0..thread_count)
+            .into_iter()
+            .map(|id| {
+                std::thread::Builder::new()
+                    .name(id.to_string())
+                    .spawn(move || {
+                        let mut stream = TcpStream::connect(addr).unwrap();
+                        RequestType::Store {
+                            key: format!("key {id}"),
+                            value: id.to_string(),
+                        }
+                        .send(&mut stream)
+                        .unwrap();
+                        assert_eq!(
+                            ResponseType::load(&mut stream).unwrap(),
+                            ResponseType::SuccessStore
+                        );
+                    })
+                    .unwrap()
+            })
+            .collect();
+
+        let server_thread = thread::spawn(move || {
+            let counter = Arc::new(AtomicUsize::new(0));
+            for stream in listener.incoming() {
+                let mut stream = stream.unwrap();
+                let cnt = Arc::clone(&counter);
+                thread::spawn(move || {
+                    let request = RequestType::load(&mut stream).unwrap();
+                    assert!(matches!(request, RequestType::Store { key: _, value: _ }));
+                    ResponseType::SuccessStore.send(&mut stream).unwrap();
+                    cnt.fetch_add(1, std::sync::atomic::Ordering::Release);
+                })
+                .join()
+                .unwrap();
+                let cnt = counter.load(std::sync::atomic::Ordering::Relaxed);
+                if cnt >= thread_count {
+                    break;
+                }
+            }
+        });
+
+        for user_thread in users_threads {
+            user_thread.join().unwrap();
+        }
+        server_thread.join().unwrap();
     }
 }
