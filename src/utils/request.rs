@@ -11,7 +11,7 @@
 //! let request = serde_json::from_str(&store).unwrap();
 //!
 //! assert_eq!(request,
-//!     RequestType::Store {
+//!     Request::Store {
 //!         key: "key".to_string(),
 //!         value: "hash".to_string(),
 //!     }
@@ -26,7 +26,7 @@
 //! let request = serde_json::from_str(&load).unwrap();
 //!
 //! assert_eq!(request,
-//!     RequestType::Load {
+//!     Request::Load {
 //!         key: "key".to_string()
 //!     }
 //! );
@@ -34,10 +34,10 @@
 use serde::{Deserialize, Serialize};
 
 /// Type for getting request from client
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "request_type")]
 #[serde(rename_all = "lowercase")]
-pub enum RequestType {
+pub enum Request {
     /// Store request.
     /// Gets pair (```key```, ```value```) which client wants server yo store.
     Store {
@@ -52,7 +52,7 @@ pub enum RequestType {
 
 #[cfg(test)]
 mod tests {
-    use super::RequestType;
+    use super::Request;
 
     fn make_store_request(key: &str, hash: &str) -> String {
         format!(
@@ -79,21 +79,21 @@ mod tests {
 
     #[test]
     fn request_store_works() {
-        let request: RequestType =
+        let request: Request =
             serde_json::from_str(make_store_request("key", "1234567890").as_str()).unwrap();
         assert_eq!(
             request,
-            RequestType::Store {
+            Request::Store {
                 key: "key".into(),
                 value: "1234567890".into()
             }
         );
 
-        let request: RequestType =
+        let request: Request =
             serde_json::from_str(make_store_request("😀", "😡😡").as_str()).unwrap();
         assert_eq!(
             request,
-            RequestType::Store {
+            Request::Store {
                 key: "😀".into(),
                 value: "😡😡".into()
             }
@@ -102,8 +102,8 @@ mod tests {
 
     #[test]
     fn request_load_works() {
-        let request: RequestType = serde_json::from_str(make_load_request("key").as_str()).unwrap();
-        assert_eq!(request, RequestType::Load { key: "key".into() });
+        let request: Request = serde_json::from_str(make_load_request("key").as_str()).unwrap();
+        assert_eq!(request, Request::Load { key: "key".into() });
     }
 
     #[test]
@@ -116,7 +116,7 @@ mod tests {
         }
         "#;
 
-        let _: RequestType = serde_json::from_str(request_str).unwrap();
+        let _: Request = serde_json::from_str(request_str).unwrap();
     }
 
     #[test]
@@ -129,6 +129,6 @@ mod tests {
         }
         "#;
 
-        let _: RequestType = serde_json::from_str(request_str).unwrap();
+        let _: Request = serde_json::from_str(request_str).unwrap();
     }
 }

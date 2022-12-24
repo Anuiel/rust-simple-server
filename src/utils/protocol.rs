@@ -41,7 +41,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::{request::RequestType, response::ResponseType};
+    use crate::utils::{request::Request, response::Response};
     use std::{
         io::{BufReader, Read, Write},
         net::{TcpListener, TcpStream},
@@ -73,8 +73,8 @@ mod tests {
     fn protocol_testing(
         user_request: String,
         user_expected_response: String,
-        server_expected_request: RequestType,
-        mut server_response: ResponseType,
+        server_expected_request: Request,
+        mut server_response: Response,
         port: usize,
     ) {
         let addr = format!("localhost:{port}");
@@ -90,7 +90,7 @@ mod tests {
         let server_thread = thread::spawn(move || {
             for stream in listener.incoming() {
                 let mut stream = stream.unwrap();
-                let request = RequestType::load(&mut stream).unwrap();
+                let request = Request::load(&mut stream).unwrap();
                 assert_eq!(request, server_expected_request);
                 server_response.send(&mut stream).unwrap();
                 break;
@@ -115,11 +115,11 @@ mod tests {
           }"#
             .to_string()
             .clear_whitespace(),
-            RequestType::Store {
+            Request::Store {
                 key: "key".into(),
                 value: "hash".into(),
             },
-            ResponseType::SuccessStore,
+            Response::SuccessStore,
             7777,
         );
 
@@ -136,8 +136,8 @@ mod tests {
           }"#
             .to_string()
             .clear_whitespace(),
-            RequestType::Load { key: "key".into() },
-            ResponseType::SuccessLoad {
+            Request::Load { key: "key".into() },
+            Response::SuccessLoad {
                 key: "key".into(),
                 value: "hash".into(),
             },
@@ -156,10 +156,10 @@ mod tests {
             .to_string()
             .clear_whitespace()
             .replace("-", " "),
-            RequestType::Load {
+            Request::Load {
                 key: "key228".into(),
             },
-            ResponseType::KeyNotFound,
+            Response::KeyNotFound,
             7779,
         );
     }
@@ -173,10 +173,10 @@ mod tests {
           }"#
             .into(),
             "".into(),
-            RequestType::Load {
+            Request::Load {
                 key: "key228".into(),
             },
-            ResponseType::KeyNotFound,
+            Response::KeyNotFound,
             7776,
         );
     }

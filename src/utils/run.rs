@@ -4,37 +4,10 @@
 use std::{
     collections::HashMap,
     net::{IpAddr, SocketAddr, TcpListener},
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, mpsc},
 };
 
-use chrono::prelude::*;
-
-use super::{protocol::Protocol, request::RequestType, response::ResponseType};
-
-/// Enum for simplier log output
-enum LogInfo<'a> {
-    Request(&'a RequestType),
-    ConnectionEstablished,
-}
-
-/// Prints more readable log output
-fn print_log(ip: IpAddr, log: LogInfo, storage_size: usize) {
-    print!("{} [{}] ", ip, Utc::now().format("%d/%b%Y:%T %z"),);
-    match log {
-        LogInfo::ConnectionEstablished => {
-            print!("Connection established. ");
-        }
-        LogInfo::Request(request) => match request {
-            RequestType::Store { key, value } => {
-                print!("Received request to write new value {value} by key {key}. ")
-            }
-            RequestType::Load { key } => {
-                print!("Received request to get value by key {key}. ")
-            }
-        },
-    }
-    println!("Storage size: {storage_size}.")
-}
+use super::{protocol::Protocol, request::Request, response::Response, logger::{Logger, Log}};
 
 /// Main function that wll lauch server on ```ip```:```port```
 ///
@@ -43,48 +16,55 @@ pub fn run(ip: IpAddr, port: u16) {
     let addr = SocketAddr::from((ip, port));
     let listener = TcpListener::bind(addr).unwrap();
 
+    let (main_sender, receiver) = mpsc::channel();
+    let _ = Logger::spawn(receiver);
     let data = HashMap::<String, String>::new();
     let data_ref = Arc::new(Mutex::new(data));
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
-        let map = Arc::clone(&data_ref);
-        print_log(
-            ip,
-            LogInfo::ConnectionEstablished,
-            map.lock().unwrap().len(),
-        );
+        let storage = Arc::clone(&data_ref);
+        let ip = stream.peer_addr().unwrap();
+        let sender = main_sender.clone();
+
+        sender
+        .send(Log::new(ip, storage.lock().unwrap().len(), None))
+        .unwrap();
+
         std::thread::Builder::new()
             .name(stream.peer_addr().unwrap().to_string())
             .spawn(move || loop {
-                let request = match RequestType::load(&mut stream) {
+                let request = match Request::load(&mut stream) {
                     Ok(request) => request,
                     Err(err) if err.kind() == std::io::ErrorKind::Other => continue,
                     Err(_err) => {
-                        let _ = ResponseType::Error.send(&mut stream);
+                        let _ = Response::Error.send(&mut stream);
                         break;
                     }
                 };
 
-                print_log(ip, LogInfo::Request(&request), map.lock().unwrap().len());
+                sender
+                .send(Log::new(
+                    ip,
+                    storage.lock().unwrap().len(),
+                    Some(request.clone()),
+                ))
+                .unwrap();
 
                 let mut response = match request {
-                    RequestType::Store { key, value } => {
-                        map.lock().unwrap().insert(key, value);
-                        ResponseType::SuccessStore
+                    Request::Store { key, value } => {
+                        storage.lock().unwrap().insert(key, value);
+                        Response::SuccessStore
                     }
-                    RequestType::Load { key } => match map.lock().unwrap().get(&key) {
-                        Some(value) => ResponseType::SuccessLoad {
+                    Request::Load { key } => match storage.lock().unwrap().get(&key) {
+                        Some(value) => Response::SuccessLoad {
                             key,
                             value: value.to_string(),
                         },
-                        None => ResponseType::KeyNotFound,
+                        None => Response::KeyNotFound,
                     },
                 };
                 response.send(&mut stream).unwrap();
-            })
-            .unwrap()
-            .join()
-            .unwrap();
+            }).unwrap();
     }
 }
 
@@ -96,7 +76,7 @@ mod tests {
         thread::{self, JoinHandle},
     };
 
-    use crate::utils::{protocol::Protocol, request::RequestType, response::ResponseType};
+    use crate::utils::{protocol::Protocol, request::Request, response::Response};
 
     #[test]
     fn multiple_users() {
@@ -110,15 +90,15 @@ mod tests {
                     .name(id.to_string())
                     .spawn(move || {
                         let mut stream = TcpStream::connect(addr).unwrap();
-                        RequestType::Store {
+                        Request::Store {
                             key: format!("key {id}"),
                             value: id.to_string(),
                         }
                         .send(&mut stream)
                         .unwrap();
                         assert_eq!(
-                            ResponseType::load(&mut stream).unwrap(),
-                            ResponseType::SuccessStore
+                            Response::load(&mut stream).unwrap(),
+                            Response::SuccessStore
                         );
                     })
                     .unwrap()
@@ -131,9 +111,9 @@ mod tests {
                 let mut stream = stream.unwrap();
                 let cnt = Arc::clone(&counter);
                 thread::spawn(move || {
-                    let request = RequestType::load(&mut stream).unwrap();
-                    assert!(matches!(request, RequestType::Store { key: _, value: _ }));
-                    ResponseType::SuccessStore.send(&mut stream).unwrap();
+                    let request = Request::load(&mut stream).unwrap();
+                    assert!(matches!(request, Request::Store { key: _, value: _ }));
+                    Response::SuccessStore.send(&mut stream).unwrap();
                     cnt.fetch_add(1, std::sync::atomic::Ordering::Release);
                 })
                 .join()

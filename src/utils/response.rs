@@ -3,7 +3,7 @@
 //! ## Example
 //! This json-like text
 //! ```
-//! let response = ResponseType::SuccessStore;
+//! let response = Response::SuccessStore;
 //!
 //! let ser_response = serde_json::to_string(response).unwrap();
 //!
@@ -11,7 +11,7 @@
 //! ```
 //! Or
 //! ```
-//! let response = ResponseType::SuccessLoad {key: "key".into(), value: "hash".into()};
+//! let response = Response::SuccessLoad {key: "key".into(), value: "hash".into()};
 //!
 //! let ser_response = serde_json::to_string(response).unwrap();
 //!
@@ -34,7 +34,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(tag = "response_status")]
 #[serde(rename_all = "lowercase")]
-pub enum ResponseType {
+pub enum Response {
     /// Server will send it after a successful store
     #[serde(rename = "success")]
     SuccessStore,
@@ -58,7 +58,7 @@ pub enum ResponseType {
 #[cfg(test)]
 mod tests {
 
-    use super::ResponseType;
+    use super::Response;
 
     trait Clear {
         fn clear_whitespace(&mut self) -> Self
@@ -119,15 +119,15 @@ mod tests {
 
     #[test]
     fn response_store_works() {
-        let response = ResponseType::SuccessStore;
+        let response = Response::SuccessStore;
         let serialize_response = serde_json::to_string(&response).unwrap();
         assert_eq!(serialize_response, make_success_store_response());
 
-        let response = ResponseType::KeyNotFound;
+        let response = Response::KeyNotFound;
         let serialize_response = serde_json::to_string(&response).unwrap();
         assert_eq!(serialize_response, make_key_not_found_response());
 
-        let response = ResponseType::SuccessLoad {
+        let response = Response::SuccessLoad {
             key: "key".into(),
             value: "value".into(),
         };
@@ -137,7 +137,7 @@ mod tests {
             make_success_load_response("key", "value")
         );
 
-        let response = ResponseType::Error;
+        let response = Response::Error;
         let serialize_response = serde_json::to_string(&response).unwrap();
         assert_eq!(serialize_response, make_error_response());
     }
