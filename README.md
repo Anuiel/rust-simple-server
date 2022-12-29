@@ -3,8 +3,8 @@
 This is a project from HSE Rust course.
 
 ## Baseline condition
-Implement a service to which you can connect with TCP and send two types of request:
-- ```store(key, hash)``` - save ```hash``` in storage inder the ```key```.
+Implement a service to which you can connect with TCP and send two types of requests:
+- ```store(key, hash)``` - save ```hash``` in storage under the ```key```.
 - ```load(key)``` - load saved ```hash``` under the ```key```.
 The service have to process requests from different sources at the same time.
 
